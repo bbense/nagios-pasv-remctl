@@ -17,7 +17,7 @@ message to the nagios command file.
 
 ( From http://nagios.sourceforge.net/docs/3_0/passivechecks.html )
 
-External applications can submit passive service check results to Nagios by writing a 
+External applications can submit passive service check results to Nagios by writing a
 PROCESS_SERVICE_CHECK_RESULT external command to the external command file.
 
 The format of the command is as follows:
@@ -26,7 +26,7 @@ The format of the command is as follows:
 
 where...
 
-timestamp is the time in time_t format (seconds since the UNIX epoch) that the service check 
+timestamp is the time in time_t format (seconds since the UNIX epoch) that the service check
 was perfomed (or submitted). Please note the single space after the right bracket.
 
 host_name is the short name of the host associated with the service in the service definition
@@ -45,23 +45,25 @@ The following environment variables will be set for any commands run via remctld
 
 REMOTE_USER
 REMUSER
-Set to the Kerberos principal of the authenticated client. REMUSER has always been set by remctld; 
+Set to the Kerberos principal of the authenticated client. REMUSER has always been set by remctld;
 REMOTE_USER is also set (to the same value) starting with remctl 2.1.
 
 REMOTE_ADDR
-The IP address of the remote host. Currently, this is always an IPv4 address, but in the future 
+The IP address of the remote host. Currently, this is always an IPv4 address, but in the future
 it may be set to an IPv6 address. This environment variable was added in remctl 2.1.
 
 REMOTE_HOST
-The hostname of the remote host, if it was available. If reverse name resolution failed, 
+The hostname of the remote host, if it was available. If reverse name resolution failed,
 this environment variable will not be set. This variable was added in remctl 2.1.
 
 REMCTL_COMMAND
-The command string that caused this command to be run. This variable will contain only 
-the command, not the subcommand or any additional arguments (which are passed as command arguments). 
+The command string that caused this command to be run. This variable will contain only
+the command, not the subcommand or any additional arguments (which are passed as command arguments).
 This variable was added in remctl 2.16.
 
 */
+
+// We need to find nagios cmd file, read config file or cmdline arg?
 
 func main() {
 	cmd := exec.Command("tr", "a-z", "A-Z")

@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -63,9 +65,108 @@ This variable was added in remctl 2.16.
 
 */
 
+/* Need to duplicate this code from nsca
+
+
+CMT: writes service/host check results to the Nagios command file
+static int write_check_result(char *host_name, char *svc_description, int return_code, char *plugin_output, time_t check_time){
+
+        if(aggregate_writes==FALSE){
+                if(open_command_file()==ERROR)
+                        return ERROR;
+                }
+
+        if(!strcmp(svc_description,""))
+                fprintf(command_file_fp,"[%lu] PROCESS_HOST_CHECK_RESULT;%s;%d;%s\n",(unsigned long)check_time,host_name,return_code,plugin_output);
+        else
+                fprintf(command_file_fp,"[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,host_name,svc_description,return_code,plugin_output);
+
+        if(aggregate_writes==FALSE)
+                close_command_file();
+        else
+                CMT: if we don't fflush() then we're writing in 4k non-CR-terminated blocks, and
+                 * anything else (eg. pscwatch) which writes to the file will be writing into
+                 * the middle of our commands.
+
+                fflush(command_file_fp);
+
+        return OK;
+        }
+
+
+
+CMT: opens the command file for writing
+static int open_command_file(void){
+        struct stat statbuf;
+
+        CMT: file is already open
+        if(command_file_fp!=NULL)
+                return OK;
+
+        CMT: command file doesn't exist - monitoring app probably isn't running...
+        if(stat(command_file,&statbuf)){
+
+                if(debug==TRUE)
+                        syslog(LOG_ERR,"Command file '%s' does not exist, attempting to use alternate dump file '%s' for output",command_file,alternate_dump_file);
+
+                CMT: try and write checks to alternate dump file
+                command_file_fp=fopen(alternate_dump_file,"a");
+                if(command_file_fp==NULL){
+                        if(debug==TRUE)
+                                syslog(LOG_ERR,"Could not open alternate dump file '%s' for appending",alternate_dump_file);
+                        return ERROR;
+                        }
+
+                return OK;
+                }
+
+        CMT: open the command file for writing or appending
+        command_file_fp=fopen(command_file,(append_to_file==TRUE)?"a":"w");
+        if(command_file_fp==NULL){
+                if(debug==TRUE)
+                        syslog(LOG_ERR,"Could not open command file '%s' for %s",command_file,(append_to_file==TRUE)?"appending":"writing");
+                return ERROR;
+                }
+
+        return OK;
+        }
+
+
+
+CMT: closes the command file
+static void close_command_file(void){
+
+        fclose(command_file_fp);
+        command_file_fp=NULL;
+
+        return;
+        }
+
+
+
+*/
+
+func send_pasv(cmd_file string, message string) bool {
+
+	fd, err := os.OpenFile(cmd_file, os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+
+	defer fd.Close()
+
+	if _, err = fd.WriteString(message); err != nil {
+		panic(err)
+	}
+	return true
+}
+
 // We need to find nagios cmd file, read config file or cmdline arg?
 
 func main() {
+
+	flag.Parse()
+
 	cmd := exec.Command("tr", "a-z", "A-Z")
 	cmd.Stdin = strings.NewReader("some input")
 	var out bytes.Buffer

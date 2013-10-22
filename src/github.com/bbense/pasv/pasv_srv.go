@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"log"
 	"os"
-	"os/exec"
-	"strings"
+	"time"
 )
 
 /*
@@ -161,19 +158,39 @@ func send_pasv(cmd_file string, message string) bool {
 	return true
 }
 
+/*
+Need to return this string
+"[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,host_name,svc_description,return_code,plugin_output);
+*/
+func get_host() string {
+	return "kickturn"
+}
+
+func get_service() ( service string , code int, message string ) {
+	return "ranger", 1, "ranger found an error"
+}
+
+func get_alert() string {
+	epoch := int32(time.Now().Unix()) // This is 32 bit seconds since Unix epoch.
+	host_name := get_host()
+	service, code, message := get_service()
+	alert := fmt.Sprintf("[%d] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n", epoch, host_name, service, code, message)
+	return alert
+}
+
 // We need to find nagios cmd file, read config file or cmdline arg?
+var (
+	verbose = flag.Bool("verbose",false, "Verbose")
+	cmdfile = flag.String("cmd", "/var/nagios/rw/nagios.cmd", "Path to nagios command file")
+)
 
 func main() {
 
 	flag.Parse()
-
-	cmd := exec.Command("tr", "a-z", "A-Z")
-	cmd.Stdin = strings.NewReader("some input")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("in all caps: %q\n", out.String())
+	// Read status and message from STDIN
+	alert := get_alert()
+    send_pasv(*cmdfile,alert)
+    if *verbose {
+        fmt.Printf("Sent alert: %q\n", alert)
+    }
 }

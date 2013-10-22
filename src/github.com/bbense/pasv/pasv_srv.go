@@ -1,9 +1,11 @@
 package main
 
 import (
+    "errors"
 	"flag"
 	"fmt"
 	"os"
+    "strings"
 	"time"
 )
 
@@ -162,8 +164,30 @@ func send_pasv(cmd_file string, message string) bool {
 Need to return this string
 "[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,host_name,svc_description,return_code,plugin_output);
 */
+
+func get_remuser() string {
+    remuser := os.Getenv("REMUSER")
+    if len(remuser) == 0 {
+        panic(errors.New("REMUSER not set"))
+    }
+    //REMUSER should look like host/foobar.slac.stanford.edu
+    if ( strings.Index(remuser,"/") > -1 ) {
+        remuser = strings.Split(remuser,"/")[1]
+    }
+    return remuser
+}
+
 func get_host() string {
-	return "kickturn"
+    //First see if we have REMOTE_HOST
+    remhost := os.Getenv("REMOTE_HOST")
+    if len(remhost) == 0 {
+        remhost = get_remuser()
+    }
+    //We should proably complain loudly at this point if we
+    //don't have a string that looks like a FQDN. 
+    // Trim domain 
+    result := strings.Split(remhost,".")[0]
+	return result
 }
 
 func get_service() ( service string , code int, message string ) {

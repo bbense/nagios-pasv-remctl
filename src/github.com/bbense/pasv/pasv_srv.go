@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -23,14 +25,14 @@ PROCESS_SERVICE_CHECK_RESULT external command to the external command file.
 
 The format of the command is as follows:
 
-[<timestamp>] PROCESS_SERVICE_CHECK_RESULT;<host_name>;<svc_description>;<return_code>;<plugin_output>
+[<timestamp>] PROCESS_SERVICE_CHECK_RESULT;<hostName>;<svc_description>;<return_code>;<plugin_output>
 
 where...
 
 timestamp is the time in time_t format (seconds since the UNIX epoch) that the service check
 was perfomed (or submitted). Please note the single space after the right bracket.
 
-host_name is the short name of the host associated with the service in the service definition
+hostName is the short name of the host associated with the service in the service definition
 
 svc_description is the description of the service as specified in the service definition
 
@@ -68,7 +70,7 @@ This variable was added in remctl 2.16.
 
 
 CMT: writes service/host check results to the Nagios command file
-static int write_check_result(char *host_name, char *svc_description, int return_code, char *plugin_output, time_t check_time){
+static int write_check_result(char *hostName, char *svc_description, int return_code, char *plugin_output, time_t check_time){
 
         if(aggregate_writes==FALSE){
                 if(open_command_file()==ERROR)
@@ -76,9 +78,9 @@ static int write_check_result(char *host_name, char *svc_description, int return
                 }
 
         if(!strcmp(svc_description,""))
-                fprintf(command_file_fp,"[%lu] PROCESS_HOST_CHECK_RESULT;%s;%d;%s\n",(unsigned long)check_time,host_name,return_code,plugin_output);
+                fprintf(command_file_fp,"[%lu] PROCESS_HOST_CHECK_RESULT;%s;%d;%s\n",(unsigned long)check_time,hostName,return_code,plugin_output);
         else
-                fprintf(command_file_fp,"[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,host_name,svc_description,return_code,plugin_output);
+                fprintf(command_file_fp,"[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,hostName,svc_description,return_code,plugin_output);
 
         if(aggregate_writes==FALSE)
                 close_command_file();
@@ -145,9 +147,9 @@ static void close_command_file(void){
 
 */
 
-func send_pasv(cmd_file string, message string) bool {
+func sendPasv(cmdFile string, message string) bool {
 
-	fd, err := os.OpenFile(cmd_file, os.O_APPEND|os.O_WRONLY, 0600)
+	fd, err := os.OpenFile(cmdFile, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		panic(err)
 	}
@@ -160,7 +162,7 @@ func send_pasv(cmd_file string, message string) bool {
 	return true
 }
 
-func get_remuser() string {
+func getRemuser() string {
 	remuser := os.Getenv("REMUSER")
 	if len(remuser) == 0 {
 		panic(errors.New("REMUSER not set"))
@@ -172,11 +174,11 @@ func get_remuser() string {
 	return remuser
 }
 
-func get_host() string {
+func getHost() string {
 	//First see if we have REMOTE_HOST
 	remhost := os.Getenv("REMOTE_HOST")
 	if len(remhost) == 0 {
-		remhost = get_remuser()
+		remhost = getRemuser()
 	}
 	//We should proably complain loudly at this point if we
 	//don't have a string that looks like a FQDN.
@@ -185,20 +187,36 @@ func get_host() string {
 	return result
 }
 
-func get_service() (service string, code int, message string) {
-	return "ranger", 1, "ranger found an error"
+//Read results from STDIN
+func getService() (service string, code int, message string) {
+	var err error
+	//Validate data
+	bio := bufio.NewScanner(os.Stdin)
+	bio.Scan()
+	line := bio.Text()
+	tokens := strings.Split(line, ";")
+	service = tokens[0]
+	code, err = strconv.Atoi(tokens[1])
+	if err != nil || code < 0 || code > 4 {
+		if code < 0 || code > 4 {
+			err = fmt.Errorf("nagios check code value is invalid: %d", code)
+		}
+		panic(err)
+	}
+	message = tokens[2]
+	return
 }
 
 /*
 Need to return this string
-"[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,host_name,svc_description,return_code,plugin_output);
+"[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,hostName,svc_description,return_code,plugin_output);
 */
 
-func get_alert() string {
+func getAlert() string {
 	epoch := int32(time.Now().Unix()) // This is 32 bit seconds since Unix epoch.
-	host_name := get_host()
-	service, code, message := get_service()
-	alert := fmt.Sprintf("[%d] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n", epoch, host_name, service, code, message)
+	hostName := getHost()
+	service, code, message := getService()
+	alert := fmt.Sprintf("[%d] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n", epoch, hostName, service, code, message)
 	return alert
 }
 
@@ -212,8 +230,8 @@ func main() {
 
 	flag.Parse()
 	// Read status and message from STDIN
-	alert := get_alert()
-	send_pasv(*cmdfile, alert)
+	alert := getAlert()
+	sendPasv(*cmdfile, alert)
 	if *verbose {
 		fmt.Printf("Sent alert: %q\n", alert)
 	}

@@ -1,11 +1,11 @@
 package main
 
 import (
-    "errors"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
-    "strings"
+	"strings"
 	"time"
 )
 
@@ -160,39 +160,39 @@ func send_pasv(cmd_file string, message string) bool {
 	return true
 }
 
+func get_remuser() string {
+	remuser := os.Getenv("REMUSER")
+	if len(remuser) == 0 {
+		panic(errors.New("REMUSER not set"))
+	}
+	//REMUSER should look like host/foobar.slac.stanford.edu
+	if strings.Index(remuser, "/") > -1 {
+		remuser = strings.Split(remuser, "/")[1]
+	}
+	return remuser
+}
+
+func get_host() string {
+	//First see if we have REMOTE_HOST
+	remhost := os.Getenv("REMOTE_HOST")
+	if len(remhost) == 0 {
+		remhost = get_remuser()
+	}
+	//We should proably complain loudly at this point if we
+	//don't have a string that looks like a FQDN.
+	// Trim domain
+	result := strings.Split(remhost, ".")[0]
+	return result
+}
+
+func get_service() (service string, code int, message string) {
+	return "ranger", 1, "ranger found an error"
+}
+
 /*
 Need to return this string
 "[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,host_name,svc_description,return_code,plugin_output);
 */
-
-func get_remuser() string {
-    remuser := os.Getenv("REMUSER")
-    if len(remuser) == 0 {
-        panic(errors.New("REMUSER not set"))
-    }
-    //REMUSER should look like host/foobar.slac.stanford.edu
-    if ( strings.Index(remuser,"/") > -1 ) {
-        remuser = strings.Split(remuser,"/")[1]
-    }
-    return remuser
-}
-
-func get_host() string {
-    //First see if we have REMOTE_HOST
-    remhost := os.Getenv("REMOTE_HOST")
-    if len(remhost) == 0 {
-        remhost = get_remuser()
-    }
-    //We should proably complain loudly at this point if we
-    //don't have a string that looks like a FQDN. 
-    // Trim domain 
-    result := strings.Split(remhost,".")[0]
-	return result
-}
-
-func get_service() ( service string , code int, message string ) {
-	return "ranger", 1, "ranger found an error"
-}
 
 func get_alert() string {
 	epoch := int32(time.Now().Unix()) // This is 32 bit seconds since Unix epoch.
@@ -204,7 +204,7 @@ func get_alert() string {
 
 // We need to find nagios cmd file, read config file or cmdline arg?
 var (
-	verbose = flag.Bool("verbose",false, "Verbose")
+	verbose = flag.Bool("verbose", false, "Verbose")
 	cmdfile = flag.String("cmd", "/var/nagios/rw/nagios.cmd", "Path to nagios command file")
 )
 
@@ -213,8 +213,8 @@ func main() {
 	flag.Parse()
 	// Read status and message from STDIN
 	alert := get_alert()
-    send_pasv(*cmdfile,alert)
-    if *verbose {
-        fmt.Printf("Sent alert: %q\n", alert)
-    }
+	send_pasv(*cmdfile, alert)
+	if *verbose {
+		fmt.Printf("Sent alert: %q\n", alert)
+	}
 }

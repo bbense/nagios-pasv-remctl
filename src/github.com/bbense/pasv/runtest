@@ -1,0 +1,6 @@
+
+env REMUSER='bbense' go run pasv_srv.go -verbose -cmd '/tmp/foobar'
+
+env REMOTE_HOST='kickturn.slac.stanford.edu' go run pasv_srv.go -verbose -cmd '/tmp/foobar'
+
+env REMUSER='host/kickturn.slac.stanford.edu' go run pasv_srv.go -verbose -cmd '/tmp/foobar'

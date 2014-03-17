@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,7 +14,7 @@ import (
 
 This program is meant to run under remtcl ( See https://github.com/rra/remctl )
 
-It will take values from stdin and the remctl environment to write a status
+It will take values from the command line and the remctl environment to write a status
 message to the nagios command file.
 
 ( From http://nagios.sourceforge.net/docs/3_0/passivechecks.html )
@@ -187,23 +186,21 @@ func getHost() string {
 	return result
 }
 
-//Read results from STDIN
-func getService() (service string, code int, message string) {
+//Read results from cmdLine
+func getService(cmdline []string) (service string, code int, message string) {
 	var err error
 	//Validate data
-	bio := bufio.NewScanner(os.Stdin)
-	bio.Scan()
-	line := bio.Text()
-	tokens := strings.Split(line, ";")
-	service = tokens[0]
-	code, err = strconv.Atoi(tokens[1])
+
+	service = cmdline[0]
+	code, err = strconv.Atoi(cmdline[1])
 	if err != nil || code < 0 || code > 4 {
 		if code < 0 || code > 4 {
 			err = fmt.Errorf("nagios check code value is invalid: %d", code)
 		}
 		panic(err)
 	}
-	message = tokens[2]
+	rest := cmdline[2:]
+	message = strings.Join(rest, " ")
 	return
 }
 
@@ -212,10 +209,10 @@ Need to return this string
 "[%lu] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n",(unsigned long)check_time,hostName,svc_description,return_code,plugin_output);
 */
 
-func getAlert() string {
+func getAlert(args []string) string {
 	epoch := int32(time.Now().Unix()) // This is 32 bit seconds since Unix epoch.
 	hostName := getHost()
-	service, code, message := getService()
+	service, code, message := getService(args)
 	alert := fmt.Sprintf("[%d] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%d;%s\n", epoch, hostName, service, code, message)
 	return alert
 }
@@ -229,8 +226,9 @@ var (
 func main() {
 
 	flag.Parse()
-	// Read status and message from STDIN
-	alert := getAlert()
+	// Read status and message from ARGV.
+
+	alert := getAlert(flag.Args())
 	sendPasv(*cmdfile, alert)
 	if *verbose {
 		fmt.Printf("Sent alert: %q\n", alert)

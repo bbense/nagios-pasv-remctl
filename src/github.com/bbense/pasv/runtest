@@ -8,4 +8,6 @@ env REMOTE_HOST='kickturn.slac.stanford.edu' go run pasv_srv.go -verbose -cmd '/
 
 env REMUSER='host/kickturn.slac.stanford.edu' go run pasv_srv.go -verbose -cmd '/tmp/foobar' ranger 1 bad stuff happening
 
+env REMUSER='host/kickturn.slac.stanford.edu' go run pasv_srv.go -verbose -fixhost ranger.slac.stanford.edu -cmd '/tmp/foobar' ranger 1 bad stuff happening
+
 env REMOTE_HOST='kickturn.slac.stanford.edu' go run pasv_srv.go -verbose -cmd '/tmp/foobar' ranger ffa all is gut

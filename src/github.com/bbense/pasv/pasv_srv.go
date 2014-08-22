@@ -221,13 +221,18 @@ func getAlert(args []string) string {
 var (
 	verbose = flag.Bool("verbose", false, "Verbose")
 	cmdfile = flag.String("cmd", "/var/nagios/rw/nagios.cmd", "Path to nagios command file")
+	fixed_host = flag.String("fixhost", "", 
+		"Used fixed_host name in alert, rather than what remctl provides in the environment")
 )
 
 func main() {
 
 	flag.Parse()
+	
+	if len(*fixed_host) > 0 {
+		os.Setenv("REMOTE_HOST",*fixed_host)
+	}
 	// Read status and message from ARGV.
-
 	alert := getAlert(flag.Args())
 	sendPasv(*cmdfile, alert)
 	if *verbose {
